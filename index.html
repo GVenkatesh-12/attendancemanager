@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Tracker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-section input {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: calc(33% - 12px);
+        }
+
+        .form-section button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .form-section button:hover {
+            background-color: #2980b9;
+        }
+
+        .subject-card {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .subject-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .subject-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .subject-card button {
+            padding: 5px 10px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .subject-card button:nth-child(1) {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .subject-card button:nth-child(2) {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .subject-card button:nth-child(3) {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .subject-card button:hover {
+            opacity: 0.9;
+        }
+
+        .percentage {
+            font-weight: bold;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .above-80 {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .below-80 {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .dashboard {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .edit-form {
+            margin-top: 10px;
+        }
+
+        .edit-form input {
+            padding: 5px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 80px;
+        }
+
+        .edit-form button {
+            padding: 5px 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .edit-form button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Attendance Tracker</h1>
+    <div class="form-section">
+        <h2>Add New Subject</h2>
+        <form id="subjectForm">
+            <input type="text" id="subjectName" placeholder="Subject name" required>
+            <input type="number" id="conducted" placeholder="Classes conducted" min="0" required>
+            <input type="number" id="attended" placeholder="Classes attended" min="0" required>
+            <button type="submit">Add Subject</button>
+        </form>
+    </div>
+
+    <div id="subjectsContainer"></div>
+
+    <div class="dashboard">
+        <h2>Overall Attendance Dashboard</h2>
+        <p>Total Classes Conducted: <span id="totalConducted">0</span></p>
+        <p>Total Classes Attended: <span id="totalAttended">0</span></p>
+        <p>Overall Attendance: <span id="overallPercentage">0</span>%</p>
+        <p id="overallStatus"></p>
+    </div>
+
+    <script>
+        let subjects = JSON.parse(localStorage.getItem('subjects')) || [];
+
+        function saveSubjects() {
+            localStorage.setItem('subjects', JSON.stringify(subjects));
+        }
+
+        function calculatePercentage(attended, conducted) {
+            return conducted > 0 ? ((attended / conducted) * 100).toFixed(2) : 0;
+        }
+
+        function getAttendanceStatus(attended, conducted) {
+            const needed = Math.ceil((0.8 * conducted - attended) / 0.2);
+            const canMiss = Math.floor((attended - 0.8 * conducted) / 0.8);
+            
+            if (attended / conducted >= 0.8) {
+                return `You can miss the next ${canMiss} classes.`;
+            }
+            return `You need to attend ${needed} classes to reach 80%.`;
+        }
+
+        function updateDashboard() {
+            const totalConducted = subjects.reduce((sum, sub) => sum + sub.conducted, 0);
+            const totalAttended = subjects.reduce((sum, sub) => sum + sub.attended, 0);
+            const overallPercentage = calculatePercentage(totalAttended, totalConducted);
+
+            document.getElementById('totalConducted').textContent = totalConducted;
+            document.getElementById('totalAttended').textContent = totalAttended;
+            document.getElementById('overallPercentage').textContent = overallPercentage;
+
+            const statusElement = document.getElementById('overallStatus');
+            if (totalConducted > 0) {
+                statusElement.textContent = getAttendanceStatus(totalAttended, totalConducted);
+            } else {
+                statusElement.textContent = '';
+            }
+        }
+
+        function renderSubjects() {
+            const container = document.getElementById('subjectsContainer');
+            container.innerHTML = '';
+
+            subjects.forEach((subject, index) => {
+                const card = document.createElement('div');
+                card.className = 'subject-card';
+                const percentage = calculatePercentage(subject.attended, subject.conducted);
+                const statusClass = percentage >= 80 ? 'above-80' : 'below-80';
+
+                card.innerHTML = `
+                    <h3>${subject.name}</h3>
+                    <p>Conducted: ${subject.conducted}</p>
+                    <p>Attended: ${subject.attended}</p>
+                    <p>Attendance: <span class="percentage ${statusClass}">${percentage}%</span></p>
+                    <p>${getAttendanceStatus(subject.attended, subject.conducted)}</p>
+                    <button onclick="markPresent(${index})">Mark Present</button>
+                    <button onclick="markAbsent(${index})">Mark Absent</button>
+                    <button onclick="removeSubject(${index})">Remove</button>
+                    <div class="edit-form">
+                        <input type="number" id="editConducted${index}" placeholder="Conducted" min="0">
+                        <input type="number" id="editAttended${index}" placeholder="Attended" min="0">
+                        <button onclick="updateSubject(${index})">Update</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            updateDashboard();
+        }
+
+        function markPresent(index) {
+            subjects[index].conducted++;
+            subjects[index].attended++;
+            saveSubjects();
+            renderSubjects();
+        }
+
+        function markAbsent(index) {
+            subjects[index].conducted++;
+            saveSubjects();
+            renderSubjects();
+        }
+
+        function removeSubject(index) {
+            subjects.splice(index, 1);
+            saveSubjects();
+            renderSubjects();
+        }
+
+        function updateSubject(index) {
+            const conducted = parseInt(document.getElementById(`editConducted${index}`).value);
+            const attended = parseInt(document.getElementById(`editAttended${index}`).value);
+
+            if (attended > conducted) {
+                alert('Attended classes cannot exceed conducted classes');
+                return;
+            }
+
+            subjects[index].conducted = conducted;
+            subjects[index].attended = attended;
+            saveSubjects();
+            renderSubjects();
+        }
+
+        document.getElementById('subjectForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('subjectName').value;
+            const conducted = parseInt(document.getElementById('conducted').value);
+            const attended = parseInt(document.getElementById('attended').value);
+
+            if (attended > conducted) {
+                alert('Attended classes cannot exceed conducted classes');
+                return;
+            }
+
+            subjects.push({
+                name,
+                conducted,
+                attended
+            });
+
+            saveSubjects();
+            renderSubjects();
+            e.target.reset();
+        });
+
+        // Initial render
+        renderSubjects();
+    </script>
+</body>
+</html>
